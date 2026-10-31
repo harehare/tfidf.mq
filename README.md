@@ -1,5 +1,8 @@
 <h1 align="center">tfidf.mq</h1>
 
+> [!WARNING]
+> This project is currently under active development. APIs and features may change without notice.
+
 Full-text ranking for [mq](https://github.com/harehare/mq), as a module: BM25 search over a set of documents and TF-IDF keyword extraction. Documents are plain strings, so it works on Markdown sections, headings, list items or anything else you can pull out with a query.
 
 ## Installation
