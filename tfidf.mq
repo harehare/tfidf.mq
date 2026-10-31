@@ -17,11 +17,9 @@ def _count(tokens):
   | var i = 0
   | let n = len(tokens)
   | let _ = while (i < n):
-      do
-        let t = tokens[i]
-        | tf = set(tf, t, if (has(tf, t)): tf[t] + 1 else: 1)
-        | i = i + 1
-      end
+      let t = tokens[i]
+      | tf = set(tf, t, if (has(tf, t)): tf[t] + 1 else: 1)
+      | i = i + 1
     end
   | tf
 end
@@ -35,23 +33,19 @@ def build_with(docs, tokenizer):
   | var total = 0
   | var i = 0
   | let _ = while (i < n):
-      do
-        let tokens = tokenizer(docs[i])
-        | let tf = _count(tokens)
-        | let terms = keys(tf)
-        | var j = 0
-        | let _ = while (j < len(terms)):
-            do
-              let t = terms[j]
-              | df = set(df, t, if (has(df, t)): df[t] + 1 else: 1)
-              | j = j + 1
-            end
-          end
-        | tfs += [tf]
-        | lens += [len(tokens)]
-        | total = total + len(tokens)
-        | i = i + 1
-      end
+      let tokens = tokenizer(docs[i])
+      | let tf = _count(tokens)
+      | let terms = keys(tf)
+      | var j = 0
+      | let _ = while (j < len(terms)):
+          let t = terms[j]
+          | df = set(df, t, if (has(df, t)): df[t] + 1 else: 1)
+          | j = j + 1
+        end
+      | tfs += [tf]
+      | lens += [len(tokens)]
+      | total = total + len(tokens)
+      | i = i + 1
     end
   | {n: n, df: df, tfs: tfs, lens: lens, avg: if (n == 0): 0 else: total / n}
 end
@@ -81,20 +75,16 @@ def search_tokens(index, tokens, k):
         | var scored = []
         | var i = 0
         | let _ = while (i < index["n"]):
-            do
-              let tf = index["tfs"][i]
-              | let norm = 1 - b + b * index["lens"][i] / index["avg"]
-              | var s = 0
-              | var j = 0
-              | let _ = while (j < len(terms)):
-                  do
-                    s = s + if (has(tf, terms[j])): idfs[j] * tf[terms[j]] * (k1 + 1) / (tf[terms[j]] + k1 * norm) else: 0
-                    | j = j + 1
-                  end
-                end
-              | scored += if (s > 0): [[s, -i]] else: []
-              | i = i + 1
-            end
+            let tf = index["tfs"][i]
+            | let norm = 1 - b + b * index["lens"][i] / index["avg"]
+            | var s = 0
+            | var j = 0
+            | let _ = while (j < len(terms)):
+                s = s + if (has(tf, terms[j])): idfs[j] * tf[terms[j]] * (k1 + 1) / (tf[terms[j]] + k1 * norm) else: 0
+                | j = j + 1
+              end
+            | scored += if (s > 0): [[s, -i]] else: []
+            | i = i + 1
           end
         | map(ds::heap::largest(scored, k), fn(p): [p[0], -p[1]];)
       end
