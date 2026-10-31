@@ -1,0 +1,18 @@
+import "tfidf"
+
+# Each `_small` / `_large` pair runs the same work at two sizes. A time ratio close to the size ratio
+# means the work is linear; a ratio near its square means something copies on every step.
+
+def docs(n):
+  map(range(0, n - 1), fn(i): "w" + to_string(i % 97) + " w" + to_string(i % 31) + " w" + to_string(i % 7) + " common w" + to_string(i % 13);)
+end
+
+def bench_build_small(): tfidf::build(docs(500))["n"];
+
+def bench_build_large(): tfidf::build(docs(2000))["n"];
+
+def search_in(n): len(tfidf::search(tfidf::build(docs(n)), "w5 w3 common", 10));
+
+def bench_search_small(): search_in(500);
+
+def bench_search_large(): search_in(2000);

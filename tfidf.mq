@@ -1,0 +1,121 @@
+import "ds"
+
+# Full-text ranking over a set of documents: BM25 search and TF-IDF keyword extraction.
+#
+# An index is a dict {n, df, tfs, lens, avg}: the number of documents, how many documents hold each
+# term, each document's term counts, each document's length in tokens and the average length.
+
+# Splits text into lowercase words on anything that is not a letter or a digit.
+# Text written without spaces, such as Japanese, stays one token per run; pass your own tokenizer to
+# `build_with` and `search_tokens` for it.
+def tokenize(text):
+  filter(split(downcase(text), "[\\W_]+"), fn(s): !is_empty(s);)
+end
+
+def _count(tokens):
+  var tf = {}
+  | var i = 0
+  | let n = len(tokens)
+  | let _ = while (i < n):
+      do
+        let t = tokens[i]
+        | tf = set(tf, t, if (has(tf, t)): tf[t] + 1 else: 1)
+        | i = i + 1
+      end
+    end
+  | tf
+end
+
+# Builds an index over an array of strings, tokenizing each with `tokenizer`.
+def build_with(docs, tokenizer):
+  let n = len(docs)
+  | var tfs = []
+  | var lens = []
+  | var df = {}
+  | var total = 0
+  | var i = 0
+  | let _ = while (i < n):
+      do
+        let tokens = tokenizer(docs[i])
+        | let tf = _count(tokens)
+        | let terms = keys(tf)
+        | var j = 0
+        | let _ = while (j < len(terms)):
+            do
+              let t = terms[j]
+              | df = set(df, t, if (has(df, t)): df[t] + 1 else: 1)
+              | j = j + 1
+            end
+          end
+        | tfs += [tf]
+        | lens += [len(tokens)]
+        | total = total + len(tokens)
+        | i = i + 1
+      end
+    end
+  | {n: n, df: df, tfs: tfs, lens: lens, avg: if (n == 0): 0 else: total / n}
+end
+
+# Builds an index over an array of strings.
+def build(docs): build_with(docs, tokenize);
+
+# Returns the BM25 inverse document frequency of `term`, which is positive even for a term in every
+# document and largest for a term in none.
+def idf(index, term):
+  let df = if (has(index["df"], term)): index["df"][term] else: 0
+  | log(1 + (index["n"] - df + 0.5) / (df + 0.5))
+end
+
+# Ranks documents against already tokenized query terms and returns the best `k` as [score, index],
+# highest score first. Documents sharing no term with the query are left out; ties go to the earlier
+# document.
+def search_tokens(index, tokens, k):
+  let terms = uniq(tokens)
+  | if (index["n"] == 0 || is_empty(terms) || k <= 0):
+      []
+    else:
+      do
+        let k1 = 1.5
+        | let b = 0.75
+        | let idfs = map(terms, fn(t): idf(index, t);)
+        | var scored = []
+        | var i = 0
+        | let _ = while (i < index["n"]):
+            do
+              let tf = index["tfs"][i]
+              | let norm = 1 - b + b * index["lens"][i] / index["avg"]
+              | var s = 0
+              | var j = 0
+              | let _ = while (j < len(terms)):
+                  do
+                    s = s + if (has(tf, terms[j])): idfs[j] * tf[terms[j]] * (k1 + 1) / (tf[terms[j]] + k1 * norm) else: 0
+                    | j = j + 1
+                  end
+                end
+              | scored += if (s > 0): [[s, -i]] else: []
+              | i = i + 1
+            end
+          end
+        | map(ds::heap::largest(scored, k), fn(p): [p[0], -p[1]];)
+      end
+end
+
+# Ranks documents against a query string and returns the best `k` as [score, index].
+def search(index, query, k): search_tokens(index, tokenize(query), k);
+
+# Returns the `k` terms that best set document `doc` apart, as [score, term] with the highest score
+# first. A term's score is its share of the document times its log inverse document frequency, so a
+# term in every document scores 0 and is left out. Ties go to the term that sorts later.
+def keywords(index, doc, k):
+  if (doc < 0 || doc >= index["n"]):
+    error("tfidf: document out of range: " + to_string(doc))
+  elif (k <= 0):
+    []
+  else:
+    do
+      let tf = index["tfs"][doc]
+      | let size = index["lens"][doc]
+      | let scored = map(keys(tf), fn(t): [tf[t] / size * log(index["n"] / index["df"][t]), t];)
+      | ds::heap::largest(filter(scored, fn(p): p[0] > 0;), k)
+    end
+end

@@ -1,0 +1,3 @@
+[submodule "vendor/ds.mq"]
+	path = vendor/ds.mq
+	url = https://github.com/harehare/ds.mq
