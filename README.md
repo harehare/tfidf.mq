@@ -58,3 +58,5 @@ git submodule update --init
 mq-test -L vendor/ds.mq tfidf_tests.mq
 mq-bench -L vendor/ds.mq -L . tfidf_bench.mq
 ```
+
+One of the goals of this module is also to check mq for performance problems, so it comes with a benchmark in `tfidf_bench.mq`.
